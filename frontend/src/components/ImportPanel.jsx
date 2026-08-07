@@ -1,29 +1,57 @@
 import { useState } from "react";
 import { importDatabase, deleteDatabase } from "../api";
 
+function nameFromFile(file) {
+  return file.name.replace(/\.df$/i, "");
+}
+
 export default function ImportPanel({ databases, onChanged }) {
   const [databaseName, setDatabaseName] = useState("");
-  const [file, setFile] = useState(null);
-  const [status, setStatus] = useState(null);
+  const [files, setFiles] = useState([]);
+  const [progress, setProgress] = useState(null);
+  const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  const isBatch = files.length > 1;
+
+  function handleFileChange(event) {
+    const selected = Array.from(event.target.files);
+    setFiles(selected);
+    if (selected.length === 1 && !databaseName) {
+      setDatabaseName(nameFromFile(selected[0]));
+    }
+  }
 
   async function handleSubmit(event) {
     event.preventDefault();
-    if (!databaseName || !file) return;
+    if (files.length === 0 || (!isBatch && !databaseName)) return;
 
     setLoading(true);
-    setStatus(null);
-    try {
-      const result = await importDatabase(databaseName, file);
-      setStatus({ ok: true, message: `${result.tables} tabelas, ${result.fields} campos, ${result.indexes} índices importados.` });
-      setDatabaseName("");
-      setFile(null);
-      onChanged();
-    } catch (error) {
-      setStatus({ ok: false, message: error.message });
-    } finally {
-      setLoading(false);
+    setResults([]);
+    const outcomes = [];
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const name = isBatch ? nameFromFile(file) : databaseName;
+      setProgress({ index: i + 1, total: files.length, name });
+      try {
+        const result = await importDatabase(name, file);
+        outcomes.push({
+          name,
+          ok: true,
+          message: `${result.tables} tabelas, ${result.fields} campos, ${result.indexes} índices`,
+        });
+      } catch (error) {
+        outcomes.push({ name, ok: false, message: error.message });
+      }
     }
+
+    setResults(outcomes);
+    setProgress(null);
+    setFiles([]);
+    setDatabaseName("");
+    setLoading(false);
+    onChanged();
   }
 
   async function handleDelete(name) {
@@ -52,24 +80,31 @@ export default function ImportPanel({ databases, onChanged }) {
           type="text"
           placeholder="nome da base (ex: multi)"
           value={databaseName}
+          disabled={isBatch}
           onChange={(e) => setDatabaseName(e.target.value)}
         />
-        <input
-          type="file"
-          accept=".df"
-          onChange={(e) => {
-            const selected = e.target.files[0];
-            setFile(selected);
-            if (selected && !databaseName) {
-              setDatabaseName(selected.name.replace(/\.df$/i, ""));
-            }
-          }}
-        />
-        <button type="submit" disabled={loading || !databaseName || !file}>
-          {loading ? "Importando..." : "Importar .df"}
+        <input type="file" accept=".df" multiple onChange={handleFileChange} />
+        <button type="submit" disabled={loading || files.length === 0 || (!isBatch && !databaseName)}>
+          {loading ? "Importando..." : files.length > 1 ? `Importar ${files.length} arquivos` : "Importar .df"}
         </button>
       </form>
-      {status && <p className={status.ok ? "status-ok" : "status-error"}>{status.message}</p>}
+      {isBatch && (
+        <p className="hint">O nome de cada base será o nome do arquivo, sem a extensão .df.</p>
+      )}
+      {progress && (
+        <p className="hint">
+          Importando {progress.index}/{progress.total}: {progress.name}...
+        </p>
+      )}
+      {results.length > 0 && (
+        <ul className="import-results">
+          {results.map((r) => (
+            <li key={r.name} className={r.ok ? "status-ok" : "status-error"}>
+              {r.name}: {r.message}
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }
