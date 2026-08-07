@@ -118,7 +118,8 @@ def table_detail(database_name: str, table_name: str, session: Session = Depends
                 "format": f.format,
                 "max_width": f.max_width,
                 "mandatory": f.mandatory,
-                "label": f.label,
+                "label": f.label or f.column_label,
+                "description": f.description or f.help_text,
             }
             for f in fields
         ],

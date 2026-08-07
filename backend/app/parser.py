@@ -1,6 +1,23 @@
 import re
 from dataclasses import dataclass, field
 
+CPSTREAM_RE = re.compile(rb"cpstream=([\w-]+)", re.IGNORECASE)
+
+CODEPAGE_ALIASES = {
+    "ibm850": "cp850",
+    "ibm437": "cp437",
+    "iso8859-1": "latin-1",
+    "1252": "cp1252",
+    "utf-8": "utf-8",
+}
+
+
+def decode_df_bytes(raw: bytes) -> str:
+    """Progress dumps declare their codepage in a `cpstream=` trailer line (e.g. ibm850)."""
+    match = CPSTREAM_RE.search(raw)
+    codec = CODEPAGE_ALIASES.get(match.group(1).decode("ascii").lower(), "cp850") if match else "cp850"
+    return raw.decode(codec, errors="replace")
+
 
 @dataclass
 class ParsedField:
@@ -10,6 +27,8 @@ class ParsedField:
     format: str = ""
     initial: str = ""
     label: str = ""
+    column_label: str = ""
+    help_text: str = ""
     position: int | None = None
     max_width: int | None = None
     mandatory: bool = False
@@ -65,13 +84,39 @@ def _attr_value(line: str, key: str) -> str | None:
     return None
 
 
+def _logical_lines(content: str) -> list[str]:
+    """Join physical lines whose quotes span multiple lines (multi-line DESCRIPTION)."""
+    logical: list[str] = []
+    buffer: list[str] | None = None
+    for raw_line in content.splitlines():
+        if buffer is None:
+            buffer = [raw_line]
+        else:
+            buffer.append(raw_line)
+        if sum(l.count('"') for l in buffer) % 2 == 0:
+            logical.append("\n".join(buffer))
+            buffer = None
+    if buffer is not None:
+        logical.append("\n".join(buffer))
+    return logical
+
+
+def _normalize_logical_line(line: str) -> str:
+    if "\n" not in line:
+        return line.strip()
+    first, rest = line.split("\n", 1)
+    return f"{first.strip()}\n{rest}"
+
+
 def _split_blocks(content: str) -> list[list[str]]:
     blocks: list[list[str]] = []
     current: list[str] = []
-    for raw_line in content.splitlines():
-        line = raw_line.strip()
+    for raw_line in _logical_lines(content):
+        line = _normalize_logical_line(raw_line)
         if not line:
             continue
+        if line == ".":
+            break
         if line.startswith("ADD "):
             if current:
                 blocks.append(current)
@@ -120,7 +165,9 @@ def parse_df(content: str) -> ParsedSchema:
                 for key, attr in (
                     ("FORMAT", "format"),
                     ("INITIAL", "initial"),
+                    ("COLUMN-LABEL", "column_label"),
                     ("LABEL", "label"),
+                    ("HELP", "help_text"),
                     ("DESCRIPTION", "description"),
                 ):
                     value = _attr_value(line, key)

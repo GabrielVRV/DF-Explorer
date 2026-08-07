@@ -3,7 +3,7 @@ from sqlmodel import Session, select
 
 from app.db import get_session
 from app.models import Database, Table, TableField, TableIndex, IndexField
-from app.parser import parse_df
+from app.parser import decode_df_bytes, parse_df
 
 router = APIRouter(prefix="/databases", tags=["databases"])
 
@@ -19,7 +19,7 @@ async def import_database(
     file: UploadFile = File(...),
     session: Session = Depends(get_session),
 ):
-    content = (await file.read()).decode("utf-8", errors="replace")
+    content = decode_df_bytes(await file.read())
     schema = parse_df(content)
 
     if not schema.tables:
@@ -62,6 +62,8 @@ async def import_database(
                 format=parsed_field.format,
                 initial=parsed_field.initial,
                 label=parsed_field.label,
+                column_label=parsed_field.column_label,
+                help_text=parsed_field.help_text,
                 position=parsed_field.position,
                 max_width=parsed_field.max_width,
                 mandatory=parsed_field.mandatory,
