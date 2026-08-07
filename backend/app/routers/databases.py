@@ -33,8 +33,7 @@ async def import_database(
     else:
         db_record = Database(name=database_name, source_file=file.filename or "")
         session.add(db_record)
-        session.commit()
-        session.refresh(db_record)
+    session.flush()
 
     table_ids_by_name: dict[str, int] = {}
     for parsed_table in schema.tables:
@@ -46,8 +45,7 @@ async def import_database(
             description=parsed_table.description,
         )
         session.add(table_record)
-        session.commit()
-        session.refresh(table_record)
+        session.flush()
         table_ids_by_name[parsed_table.name] = table_record.id
 
     for parsed_field in schema.fields:
@@ -83,8 +81,7 @@ async def import_database(
             is_primary=parsed_index.is_primary,
         )
         session.add(index_record)
-        session.commit()
-        session.refresh(index_record)
+        session.flush()
         for position, parsed_index_field in enumerate(parsed_index.fields):
             session.add(
                 IndexField(
