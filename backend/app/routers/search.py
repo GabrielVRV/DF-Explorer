@@ -10,6 +10,7 @@ router = APIRouter(prefix="/search", tags=["search"])
 @router.get("")
 def search(q: str = Query(..., min_length=2), session: Session = Depends(get_session)):
     like = f"%{q}%"
+    q_lower = q.lower()
 
     table_rows = session.exec(
         select(Table, Database)
@@ -55,6 +56,9 @@ def search(q: str = Query(..., min_length=2), session: Session = Depends(get_ses
         for table_field, table, database in field_rows
     ]
 
+    tables.sort(key=lambda t: t["table"].lower() != q_lower)
+    fields.sort(key=lambda f: f["field"].lower() != q_lower)
+
     indexes = []
     for index, table, database in index_rows:
         index_fields = session.exec(
@@ -72,6 +76,8 @@ def search(q: str = Query(..., min_length=2), session: Session = Depends(get_ses
                 ],
             }
         )
+
+    indexes.sort(key=lambda idx: idx["index"].lower() != q_lower)
 
     return {"tables": tables, "fields": fields, "indexes": indexes}
 
