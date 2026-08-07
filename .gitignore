@@ -28,3 +28,6 @@ frontend/build/
 Thumbs.db
 
 dfs/
+
+# logs do start_silent.vbs
+desktop.log
