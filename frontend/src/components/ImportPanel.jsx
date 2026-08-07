@@ -54,7 +54,17 @@ export default function ImportPanel({ databases, onChanged }) {
           value={databaseName}
           onChange={(e) => setDatabaseName(e.target.value)}
         />
-        <input type="file" accept=".df" onChange={(e) => setFile(e.target.files[0])} />
+        <input
+          type="file"
+          accept=".df"
+          onChange={(e) => {
+            const selected = e.target.files[0];
+            setFile(selected);
+            if (selected && !databaseName) {
+              setDatabaseName(selected.name.replace(/\.df$/i, ""));
+            }
+          }}
+        />
         <button type="submit" disabled={loading || !databaseName || !file}>
           {loading ? "Importando..." : "Importar .df"}
         </button>
