@@ -1,3 +1,4 @@
+import sys
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -30,6 +31,13 @@ def health():
     return {"status": "ok"}
 
 
-FRONTEND_DIST = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
+def _frontend_dist_dir() -> Path:
+    if getattr(sys, "frozen", False):
+        # Empacotado (PyInstaller): os arquivos foram incluidos via --add-data.
+        return Path(sys._MEIPASS) / "frontend" / "dist"
+    return Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
+
+
+FRONTEND_DIST = _frontend_dist_dir()
 if FRONTEND_DIST.exists():
     app.mount("/", StaticFiles(directory=FRONTEND_DIST, html=True), name="frontend")

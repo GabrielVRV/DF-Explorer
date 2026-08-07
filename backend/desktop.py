@@ -13,6 +13,9 @@ FRONTEND_DIST = FRONTEND_DIR / "dist"
 
 
 def ensure_frontend_built() -> None:
+    if getattr(sys, "frozen", False):
+        # Empacotado: o frontend ja foi compilado e incluido no build. Nada a fazer.
+        return
     if FRONTEND_DIST.exists():
         return
     print("Compilando o frontend pela primeira vez (pode levar um minuto)...")

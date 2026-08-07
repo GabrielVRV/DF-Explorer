@@ -1,9 +1,19 @@
 import os
+import sys
 from pathlib import Path
 from sqlalchemy import event
 from sqlmodel import SQLModel, Session, create_engine
 
-DATA_DIR = Path(os.environ.get("DF_EXPLORER_DATA_DIR", Path(__file__).resolve().parent.parent / "data"))
+
+def _default_data_dir() -> Path:
+    if getattr(sys, "frozen", False):
+        # Empacotado (PyInstaller): guarda os dados fora da pasta temporaria de extracao.
+        appdata = os.environ.get("APPDATA", str(Path.home()))
+        return Path(appdata) / "DF Explorer" / "data"
+    return Path(__file__).resolve().parent.parent / "data"
+
+
+DATA_DIR = Path(os.environ.get("DF_EXPLORER_DATA_DIR", _default_data_dir()))
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 DB_PATH = DATA_DIR / "schema.db"

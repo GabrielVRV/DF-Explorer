@@ -31,3 +31,7 @@ dfs/
 
 # logs do start_silent.vbs
 desktop.log
+
+# build do executavel (gerado, nao versionar)
+backend/build/
+backend/dist/
