@@ -1,0 +1,28 @@
+# dados sensiveis da empresa - nunca versionar
+backend/data/*
+!backend/data/.gitkeep
+*.df
+*.db
+*.sqlite
+*.sqlite3
+
+# python
+__pycache__/
+*.pyc
+venv/
+.venv/
+
+# node
+node_modules/
+frontend/dist/
+frontend/build/
+
+# env
+.env
+.env.local
+
+# editor / os
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
