@@ -33,6 +33,8 @@ def start_server() -> None:
 def main() -> None:
     ensure_frontend_built()
 
+    webview.settings["ALLOW_DOWNLOADS"] = True
+
     threading.Thread(target=start_server, daemon=True).start()
     time.sleep(1.5)
 

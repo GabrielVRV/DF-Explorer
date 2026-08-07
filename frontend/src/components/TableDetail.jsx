@@ -1,3 +1,5 @@
+import { tableExportUrl } from "../api";
+
 function YesBadge({ show }) {
   return show ? <span className="badge badge-yes">sim</span> : null;
 }
@@ -22,73 +24,82 @@ export default function TableDetail({ detail, onClose, onCopyField }) {
           <h2>
             {detail.database}.{detail.table}
           </h2>
-          <button type="button" onClick={onClose}>
-            Fechar
-          </button>
+          <div className="detail-actions">
+            <a className="btn-secondary" href={tableExportUrl(detail.database, detail.table)} download>
+              Exportar Excel
+            </a>
+            <button type="button" onClick={onClose}>
+              Fechar
+            </button>
+          </div>
         </header>
         <p className="area">Área: {detail.area}</p>
 
         <h3>Campos</h3>
-        <table>
-          <thead>
-            <tr>
-              <th>Nome</th>
-              <th>Tipo</th>
-              <th>Formato</th>
-              <th>Tamanho</th>
-              <th>Obrigatório</th>
-              <th>Label</th>
-              <th>Descrição</th>
-            </tr>
-          </thead>
-          <tbody>
-            {detail.fields.map((f) => (
-              <tr key={f.name}>
-                <td
-                  className="mono copyable"
-                  title="Clique para copiar tabela.campo"
-                  onClick={() => onCopyField(detail.table, f.name)}
-                >
-                  {f.name}
-                </td>
-                <td className="type-badge">{f.data_type}</td>
-                <td className="type-badge">{f.format}</td>
-                <td>{f.max_width}</td>
-                <td>
-                  <YesBadge show={f.mandatory} />
-                </td>
-                <td>{f.label}</td>
-                <td className="description-cell">{f.description}</td>
+        <div className="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Nome</th>
+                <th>Tipo</th>
+                <th>Formato</th>
+                <th>Tamanho</th>
+                <th>Obrigatório</th>
+                <th>Label</th>
+                <th>Descrição</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {detail.fields.map((f) => (
+                <tr key={f.name}>
+                  <td
+                    className="mono copyable"
+                    title="Clique para copiar tabela.campo"
+                    onClick={() => onCopyField(detail.table, f.name)}
+                  >
+                    {f.name}
+                  </td>
+                  <td className="type-badge">{f.data_type}</td>
+                  <td className="type-badge">{f.format}</td>
+                  <td>{f.max_width}</td>
+                  <td>
+                    <YesBadge show={f.mandatory} />
+                  </td>
+                  <td>{f.label}</td>
+                  <td className="description-cell">{f.description}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
 
         <h3>Índices</h3>
-        <table>
-          <thead>
-            <tr>
-              <th>Nome</th>
-              <th>Campos</th>
-              <th>Único</th>
-              <th>Primário</th>
-            </tr>
-          </thead>
-          <tbody>
-            {detail.indexes.map((idx) => (
-              <tr key={idx.name}>
-                <td className="mono">{idx.name}</td>
-                <td className="type-badge">{idx.fields.map((f) => `${f.name}${f.ascending ? "" : " ↓"}`).join(", ")}</td>
-                <td>
-                  <YesBadge show={idx.is_unique} />
-                </td>
-                <td>
-                  <YesBadge show={idx.is_primary} />
-                </td>
+        <div className="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Nome</th>
+                <th>Campos</th>
+                <th>Único</th>
+                <th>Primário</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {detail.indexes.map((idx) => (
+                <tr key={idx.name}>
+                  <td className="mono">{idx.name}</td>
+                  <td className="type-badge">{idx.fields.map((f) => `${f.name}${f.ascending ? "" : " ↓"}`).join(", ")}</td>
+                  <td>
+                    <YesBadge show={idx.is_unique} />
+                  </td>
+                  <td>
+                    <YesBadge show={idx.is_primary} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

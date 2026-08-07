@@ -1,4 +1,9 @@
-from fastapi import APIRouter, Depends, Query
+from io import BytesIO
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import Response
+from openpyxl import Workbook
+from openpyxl.styles import Font
 from sqlmodel import Session, select
 
 from app.db import get_session
@@ -82,8 +87,7 @@ def search(q: str = Query(..., min_length=2), session: Session = Depends(get_ses
     return {"tables": tables, "fields": fields, "indexes": indexes}
 
 
-@router.get("/tables/{database_name}/{table_name}")
-def table_detail(database_name: str, table_name: str, session: Session = Depends(get_session)):
+def _load_table_detail(database_name: str, table_name: str, session: Session):
     database = session.exec(select(Database).where(Database.name == database_name)).first()
     if not database:
         return {"error": "database not found"}
@@ -131,3 +135,67 @@ def table_detail(database_name: str, table_name: str, session: Session = Depends
         ],
         "indexes": index_details,
     }
+
+
+@router.get("/tables/{database_name}/{table_name}")
+def table_detail(database_name: str, table_name: str, session: Session = Depends(get_session)):
+    return _load_table_detail(database_name, table_name, session)
+
+
+@router.get("/tables/{database_name}/{table_name}/export")
+def export_table(database_name: str, table_name: str, session: Session = Depends(get_session)):
+    detail = _load_table_detail(database_name, table_name, session)
+    if "error" in detail:
+        raise HTTPException(status_code=404, detail=detail["error"])
+
+    workbook = Workbook()
+    bold = Font(bold=True)
+
+    fields_sheet = workbook.active
+    fields_sheet.title = "Campos"
+    fields_sheet.append(["Nome", "Tipo", "Formato", "Tamanho", "Obrigatório", "Label", "Descrição"])
+    for cell in fields_sheet[1]:
+        cell.font = bold
+    for f in detail["fields"]:
+        fields_sheet.append(
+            [
+                f["name"],
+                f["data_type"],
+                f["format"],
+                f["max_width"],
+                "sim" if f["mandatory"] else "",
+                f["label"],
+                f["description"],
+            ]
+        )
+    for column_cells in fields_sheet.columns:
+        length = max(len(str(cell.value)) for cell in column_cells if cell.value is not None)
+        fields_sheet.column_dimensions[column_cells[0].column_letter].width = min(max(length + 2, 10), 60)
+
+    indexes_sheet = workbook.create_sheet("Índices")
+    indexes_sheet.append(["Nome", "Campos", "Único", "Primário"])
+    for cell in indexes_sheet[1]:
+        cell.font = bold
+    for idx in detail["indexes"]:
+        indexes_sheet.append(
+            [
+                idx["name"],
+                ", ".join(f"{f['name']}{'' if f['ascending'] else ' DESC'}" for f in idx["fields"]),
+                "sim" if idx["is_unique"] else "",
+                "sim" if idx["is_primary"] else "",
+            ]
+        )
+    for column_cells in indexes_sheet.columns:
+        length = max(len(str(cell.value)) for cell in column_cells if cell.value is not None)
+        indexes_sheet.column_dimensions[column_cells[0].column_letter].width = min(max(length + 2, 10), 60)
+
+    buffer = BytesIO()
+    workbook.save(buffer)
+    buffer.seek(0)
+
+    filename = f"{detail['database']}.{detail['table']}.xlsx".replace(" ", "_")
+    return Response(
+        content=buffer.getvalue(),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )

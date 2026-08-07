@@ -23,6 +23,10 @@ export function tableDetail(databaseName, tableName) {
   );
 }
 
+export function tableExportUrl(databaseName, tableName) {
+  return `${API_URL}/search/tables/${encodeURIComponent(databaseName)}/${encodeURIComponent(tableName)}/export`;
+}
+
 export function importDatabase(databaseName, file) {
   const formData = new FormData();
   formData.append("database_name", databaseName);
