@@ -1,3 +1,7 @@
+function YesBadge({ show }) {
+  return show ? <span className="badge badge-yes">sim</span> : null;
+}
+
 export default function TableDetail({ detail, onClose }) {
   if (!detail) return null;
 
@@ -19,7 +23,7 @@ export default function TableDetail({ detail, onClose }) {
             {detail.database}.{detail.table}
           </h2>
           <button type="button" onClick={onClose}>
-            fechar
+            Fechar
           </button>
         </header>
         <p className="area">Área: {detail.area}</p>
@@ -40,11 +44,13 @@ export default function TableDetail({ detail, onClose }) {
           <tbody>
             {detail.fields.map((f) => (
               <tr key={f.name}>
-                <td>{f.name}</td>
-                <td>{f.data_type}</td>
-                <td>{f.format}</td>
+                <td className="mono">{f.name}</td>
+                <td className="type-badge">{f.data_type}</td>
+                <td className="type-badge">{f.format}</td>
                 <td>{f.max_width}</td>
-                <td>{f.mandatory ? "sim" : ""}</td>
+                <td>
+                  <YesBadge show={f.mandatory} />
+                </td>
                 <td>{f.label}</td>
                 <td className="description-cell">{f.description}</td>
               </tr>
@@ -65,10 +71,14 @@ export default function TableDetail({ detail, onClose }) {
           <tbody>
             {detail.indexes.map((idx) => (
               <tr key={idx.name}>
-                <td>{idx.name}</td>
-                <td>{idx.fields.map((f) => `${f.name}${f.ascending ? "" : " ↓"}`).join(", ")}</td>
-                <td>{idx.is_unique ? "sim" : ""}</td>
-                <td>{idx.is_primary ? "sim" : ""}</td>
+                <td className="mono">{idx.name}</td>
+                <td className="type-badge">{idx.fields.map((f) => `${f.name}${f.ascending ? "" : " ↓"}`).join(", ")}</td>
+                <td>
+                  <YesBadge show={idx.is_unique} />
+                </td>
+                <td>
+                  <YesBadge show={idx.is_primary} />
+                </td>
               </tr>
             ))}
           </tbody>

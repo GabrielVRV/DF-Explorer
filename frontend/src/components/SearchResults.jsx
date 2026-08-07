@@ -1,4 +1,8 @@
-export default function SearchResults({ results, onSelectTable }) {
+function YesBadge({ show }) {
+  return show ? <span className="badge badge-yes">sim</span> : null;
+}
+
+export default function SearchResults({ results, filter = "all", onSelectTable }) {
   if (!results) return null;
 
   const { tables, fields, indexes } = results;
@@ -8,10 +12,14 @@ export default function SearchResults({ results, onSelectTable }) {
     return <p className="empty">Nenhum resultado encontrado.</p>;
   }
 
+  const showTables = filter === "all" || filter === "tables";
+  const showFields = filter === "all" || filter === "fields";
+  const showIndexes = filter === "all" || filter === "indexes";
+
   return (
     <div className="results">
-      {tables.length > 0 && (
-        <section>
+      {showTables && tables.length > 0 && (
+        <section className="result-card">
           <h3>Tabelas ({tables.length})</h3>
           <table>
             <thead>
@@ -24,8 +32,8 @@ export default function SearchResults({ results, onSelectTable }) {
             <tbody>
               {tables.map((t) => (
                 <tr key={`${t.database}.${t.table}`} className="clickable" onClick={() => onSelectTable(t.database, t.table)}>
-                  <td>{t.database}</td>
-                  <td>{t.table}</td>
+                  <td className="mono">{t.database}</td>
+                  <td className="mono">{t.table}</td>
                   <td>{t.area}</td>
                 </tr>
               ))}
@@ -34,8 +42,8 @@ export default function SearchResults({ results, onSelectTable }) {
         </section>
       )}
 
-      {fields.length > 0 && (
-        <section>
+      {showFields && fields.length > 0 && (
+        <section className="result-card">
           <h3>Campos ({fields.length})</h3>
           <table>
             <thead>
@@ -56,13 +64,15 @@ export default function SearchResults({ results, onSelectTable }) {
                   className="clickable"
                   onClick={() => onSelectTable(f.database, f.table)}
                 >
-                  <td>{f.database}</td>
-                  <td>{f.table}</td>
-                  <td>{f.field}</td>
-                  <td>{f.data_type}</td>
-                  <td>{f.format}</td>
+                  <td className="mono">{f.database}</td>
+                  <td className="mono">{f.table}</td>
+                  <td className="mono">{f.field}</td>
+                  <td className="type-badge">{f.data_type}</td>
+                  <td className="type-badge">{f.format}</td>
                   <td>{f.max_width}</td>
-                  <td>{f.mandatory ? "sim" : ""}</td>
+                  <td>
+                    <YesBadge show={f.mandatory} />
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -70,8 +80,8 @@ export default function SearchResults({ results, onSelectTable }) {
         </section>
       )}
 
-      {indexes.length > 0 && (
-        <section>
+      {showIndexes && indexes.length > 0 && (
+        <section className="result-card">
           <h3>Índices ({indexes.length})</h3>
           <table>
             <thead>
@@ -91,12 +101,16 @@ export default function SearchResults({ results, onSelectTable }) {
                   className="clickable"
                   onClick={() => onSelectTable(idx.database, idx.table)}
                 >
-                  <td>{idx.database}</td>
-                  <td>{idx.table}</td>
-                  <td>{idx.index}</td>
-                  <td>{idx.fields.map((f) => f.name).join(", ")}</td>
-                  <td>{idx.is_unique ? "sim" : ""}</td>
-                  <td>{idx.is_primary ? "sim" : ""}</td>
+                  <td className="mono">{idx.database}</td>
+                  <td className="mono">{idx.table}</td>
+                  <td className="mono">{idx.index}</td>
+                  <td className="type-badge">{idx.fields.map((f) => f.name).join(", ")}</td>
+                  <td>
+                    <YesBadge show={idx.is_unique} />
+                  </td>
+                  <td>
+                    <YesBadge show={idx.is_primary} />
+                  </td>
                 </tr>
               ))}
             </tbody>
