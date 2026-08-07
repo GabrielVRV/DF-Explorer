@@ -2,7 +2,7 @@ function YesBadge({ show }) {
   return show ? <span className="badge badge-yes">sim</span> : null;
 }
 
-export default function SearchResults({ results, filter = "all", onSelectTable }) {
+export default function SearchResults({ results, filter = "all", onSelectTable, onCopyField }) {
   if (!results) return null;
 
   const { tables, fields, indexes } = results;
@@ -66,7 +66,16 @@ export default function SearchResults({ results, filter = "all", onSelectTable }
                 >
                   <td className="mono">{f.database}</td>
                   <td className="mono">{f.table}</td>
-                  <td className="mono">{f.field}</td>
+                  <td
+                    className="mono copyable"
+                    title="Clique para copiar tabela.campo"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onCopyField(f.table, f.field);
+                    }}
+                  >
+                    {f.field}
+                  </td>
                   <td className="type-badge">{f.data_type}</td>
                   <td className="type-badge">{f.format}</td>
                   <td>{f.max_width}</td>

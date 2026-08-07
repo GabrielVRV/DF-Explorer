@@ -292,6 +292,37 @@ button:disabled {
   background: var(--danger-soft);
 }
 
+.copyable {
+  cursor: pointer;
+  text-decoration: underline dotted transparent;
+  text-underline-offset: 3px;
+}
+
+.copyable:hover {
+  color: var(--accent);
+  text-decoration-color: var(--accent);
+}
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 28px;
+  transform: translateX(-50%);
+  background: var(--text);
+  color: var(--bg);
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: var(--mono);
+  box-shadow: var(--shadow);
+  z-index: 100;
+}
+
+.toast-error {
+  background: var(--danger);
+  color: #fff;
+}
+
 /* status */
 
 .status-ok {

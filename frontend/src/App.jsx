@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { listDatabases, search, tableDetail } from "./api";
 import DatabasesPage from "./components/DatabasesPage";
 import SearchView from "./components/SearchView";
@@ -37,6 +37,8 @@ function App() {
   const [detail, setDetail] = useState(null);
   const [error, setError] = useState(null);
   const [searching, setSearching] = useState(false);
+  const [toast, setToast] = useState(null);
+  const toastTimeout = useRef(null);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -71,6 +73,16 @@ function App() {
     setResults(null);
     setError(null);
   }
+
+  const copyField = useCallback((tableName, fieldName) => {
+    const text = `${tableName}.${fieldName}`;
+    navigator.clipboard
+      .writeText(text)
+      .then(() => setToast({ text, ok: true }))
+      .catch(() => setToast({ text: "Não foi possível copiar", ok: false }));
+    if (toastTimeout.current) clearTimeout(toastTimeout.current);
+    toastTimeout.current = setTimeout(() => setToast(null), 1800);
+  }, []);
 
   async function handleSelectTable(databaseName, tableName) {
     try {
@@ -115,13 +127,16 @@ function App() {
             error={error}
             results={results}
             onSelectTable={handleSelectTable}
+            onCopyField={copyField}
           />
         ) : (
           <DatabasesPage databases={databases} onChanged={refreshDatabases} />
         )}
       </main>
 
-      <TableDetail detail={detail} onClose={() => setDetail(null)} />
+      <TableDetail detail={detail} onClose={() => setDetail(null)} onCopyField={copyField} />
+
+      {toast && <div className={`toast ${toast.ok ? "" : "toast-error"}`}>{toast.ok ? "Copiado: " : ""}{toast.text}</div>}
     </div>
   );
 }

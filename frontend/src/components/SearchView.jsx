@@ -8,7 +8,7 @@ const FILTERS = [
   { key: "indexes", label: "Índices" },
 ];
 
-export default function SearchView({ query, setQuery, onSearch, onClear, searching, error, results, onSelectTable }) {
+export default function SearchView({ query, setQuery, onSearch, onClear, searching, error, results, onSelectTable, onCopyField }) {
   const [filter, setFilter] = useState("all");
 
   useEffect(() => {
@@ -58,7 +58,7 @@ export default function SearchView({ query, setQuery, onSearch, onClear, searchi
         </div>
       )}
 
-      <SearchResults results={results} filter={filter} onSelectTable={onSelectTable} />
+      <SearchResults results={results} filter={filter} onSelectTable={onSelectTable} onCopyField={onCopyField} />
     </div>
   );
 }

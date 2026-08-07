@@ -2,7 +2,7 @@ function YesBadge({ show }) {
   return show ? <span className="badge badge-yes">sim</span> : null;
 }
 
-export default function TableDetail({ detail, onClose }) {
+export default function TableDetail({ detail, onClose, onCopyField }) {
   if (!detail) return null;
 
   if (detail.error) {
@@ -44,7 +44,13 @@ export default function TableDetail({ detail, onClose }) {
           <tbody>
             {detail.fields.map((f) => (
               <tr key={f.name}>
-                <td className="mono">{f.name}</td>
+                <td
+                  className="mono copyable"
+                  title="Clique para copiar tabela.campo"
+                  onClick={() => onCopyField(detail.table, f.name)}
+                >
+                  {f.name}
+                </td>
                 <td className="type-badge">{f.data_type}</td>
                 <td className="type-badge">{f.format}</td>
                 <td>{f.max_width}</td>
