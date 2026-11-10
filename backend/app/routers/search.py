@@ -1,3 +1,5 @@
+from urllib.parse import quote
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import Response
 from sqlmodel import Session, select
@@ -6,6 +8,11 @@ from app.db import get_session
 from app.excel_export import build_multi_table_workbook, build_single_table_workbook
 from app.models import Database, Table, TableField, TableIndex, IndexField
 
+ASCII_PRINTABLE_START = 0x20
+ASCII_DELETE = 0x7F
+ASCII_LIMIT = 0x80
+UNSAFE_FILENAME_CHARS = '"' + chr(92)  # aspas e barra invertida
+FILENAME_REPLACEMENT_CHAR = "_"
 XLSX_MEDIA_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
 router = APIRouter(prefix="/search", tags=["search"])
@@ -136,11 +143,26 @@ def _load_table_detail(database_name: str, table_name: str, session: Session):
     }
 
 
+def _content_disposition(filename: str) -> str:
+    # Controles (inclui CR/LF) viram "_" para impedir injeção de cabeçalho.
+    cleaned = "".join(
+        FILENAME_REPLACEMENT_CHAR if ord(c) < ASCII_PRINTABLE_START or ord(c) == ASCII_DELETE else c
+        for c in filename
+    )
+    # Fallback ASCII para clientes antigos; aspas e barra invertida quebrariam o valor entre aspas.
+    ascii_name = "".join(
+        c if ord(c) < ASCII_LIMIT and c not in UNSAFE_FILENAME_CHARS else FILENAME_REPLACEMENT_CHAR
+        for c in cleaned
+    )
+    # RFC 6266/5987: nome completo em UTF-8 percent-encoded.
+    return f"attachment; filename=\"{ascii_name}\"; filename*=UTF-8''{quote(cleaned, safe='')}"
+
+
 def _xlsx_response(content: bytes, filename: str) -> Response:
     return Response(
         content=content,
         media_type=XLSX_MEDIA_TYPE,
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        headers={"Content-Disposition": _content_disposition(filename)},
     )
 
 
