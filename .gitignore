@@ -35,3 +35,7 @@ desktop.log
 # build do executavel (gerado, nao versionar)
 backend/build/
 backend/dist/
+
+# configuracao local do Claude Code
+.claude/settings.local.json
+CLAUDE.md
