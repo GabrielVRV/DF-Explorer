@@ -1,8 +1,18 @@
+import { tableKey } from "../tableKey";
+
 function YesBadge({ show }) {
   return show ? <span className="badge badge-yes">sim</span> : null;
 }
 
-export default function SearchResults({ results, filter = "all", onSelectTable, onCopyField }) {
+export default function SearchResults({
+  results,
+  filter = "all",
+  onSelectTable,
+  onCopyField,
+  selectedTables = [],
+  onToggleTable,
+  onSetTablesSelected,
+}) {
   if (!results) return null;
 
   const { tables, fields, indexes } = results;
@@ -11,6 +21,11 @@ export default function SearchResults({ results, filter = "all", onSelectTable, 
   if (!hasResults) {
     return <p className="empty">Nenhum resultado encontrado.</p>;
   }
+
+  const selectedKeys = new Set(selectedTables.map((t) => tableKey(t.database, t.table)));
+  const selectedVisibleCount = tables.filter((t) => selectedKeys.has(tableKey(t.database, t.table))).length;
+  const allVisibleSelected = tables.length > 0 && selectedVisibleCount === tables.length;
+  const someVisibleSelected = selectedVisibleCount > 0 && !allVisibleSelected;
 
   const showTables = filter === "all" || filter === "tables";
   const showFields = filter === "all" || filter === "fields";
@@ -24,19 +39,47 @@ export default function SearchResults({ results, filter = "all", onSelectTable, 
           <table>
             <thead>
               <tr>
+                <th className="select-cell">
+                  <input
+                    type="checkbox"
+                    aria-label="Selecionar todas as tabelas desta busca"
+                    checked={allVisibleSelected}
+                    // indeterminate só existe como propriedade do DOM, não como atributo
+                    ref={(el) => {
+                      if (el) el.indeterminate = someVisibleSelected;
+                    }}
+                    onChange={(e) => onSetTablesSelected(tables, e.target.checked)}
+                  />
+                </th>
                 <th>Base</th>
                 <th>Tabela</th>
                 <th>Área</th>
               </tr>
             </thead>
             <tbody>
-              {tables.map((t) => (
-                <tr key={`${t.database}.${t.table}`} className="clickable" onClick={() => onSelectTable(t.database, t.table)}>
-                  <td className="mono">{t.database}</td>
-                  <td className="mono">{t.table}</td>
-                  <td>{t.area}</td>
-                </tr>
-              ))}
+              {tables.map((t) => {
+                const key = tableKey(t.database, t.table);
+                const isSelected = selectedKeys.has(key);
+                return (
+                  <tr
+                    key={key}
+                    className={`clickable${isSelected ? " selected" : ""}`}
+                    onClick={() => onSelectTable(t.database, t.table)}
+                  >
+                    <td className="select-cell" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        aria-label={`Selecionar ${t.database}.${t.table}`}
+                        checked={isSelected}
+                        onChange={() => onToggleTable(t.database, t.table)}
+                      />
+                    </td>
+                    <td className="mono">{t.database}</td>
+                    <td className="mono">{t.table}</td>
+                    <td>{t.area}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </section>

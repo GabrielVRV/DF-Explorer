@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import SearchResults from "./SearchResults";
+import SelectionBar from "./SelectionBar";
 
 const FILTERS = [
   { key: "all", label: "Tudo" },
@@ -8,7 +9,22 @@ const FILTERS = [
   { key: "indexes", label: "Índices" },
 ];
 
-export default function SearchView({ query, setQuery, onSearch, onClear, searching, error, results, onSelectTable, onCopyField }) {
+export default function SearchView({
+  query,
+  setQuery,
+  onSearch,
+  onClear,
+  searching,
+  error,
+  results,
+  onSelectTable,
+  onCopyField,
+  selectedTables,
+  onToggleTable,
+  onSetTablesSelected,
+  onRemoveTable,
+  onClearSelection,
+}) {
   const [filter, setFilter] = useState("all");
 
   useEffect(() => {
@@ -42,6 +58,8 @@ export default function SearchView({ query, setQuery, onSearch, onClear, searchi
         </button>
       </form>
 
+      <SelectionBar selectedTables={selectedTables} onRemove={onRemoveTable} onClear={onClearSelection} />
+
       {error && <p className="status-error banner">{error}</p>}
 
       {results && (
@@ -58,7 +76,15 @@ export default function SearchView({ query, setQuery, onSearch, onClear, searchi
         </div>
       )}
 
-      <SearchResults results={results} filter={filter} onSelectTable={onSelectTable} onCopyField={onCopyField} />
+      <SearchResults
+        results={results}
+        filter={filter}
+        onSelectTable={onSelectTable}
+        onCopyField={onCopyField}
+        selectedTables={selectedTables}
+        onToggleTable={onToggleTable}
+        onSetTablesSelected={onSetTablesSelected}
+      />
     </div>
   );
 }

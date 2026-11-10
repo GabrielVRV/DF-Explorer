@@ -76,6 +76,23 @@ curl -X POST http://localhost:8000/databases/import \
 curl "http://localhost:8000/search?q=cust-num"
 ```
 
+### Exportando para Excel
+
+Pela tela, o botão **Exportar Excel** do detalhe de uma tabela gera um `.xlsx` com
+as abas `Campos` e `Índices`.
+
+Para exportar várias tabelas de uma vez, marque as caixas na lista de Tabelas dos
+resultados. A seleção continua valendo entre buscas diferentes e aparece na barra
+acima dos resultados, onde fica o botão **Exportar Excel**. O arquivo gerado tem
+uma aba `Tabelas` (resumo com base, tabela, área e nome da aba) e uma aba por
+tabela, com base/tabela/área no topo, o bloco `CAMPOS` e o bloco `ÍNDICES`.
+
+Pela API, os pares `database`/`table` são repetidos na ordem das abas:
+
+```bash
+curl -o tabelas.xlsx "http://localhost:8000/search/tables/export?database=multi&table=customer&database=emsfin&table=item"
+```
+
 ## Estrutura
 
 ```

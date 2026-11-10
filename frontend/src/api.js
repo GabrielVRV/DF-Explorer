@@ -27,6 +27,16 @@ export function tableExportUrl(databaseName, tableName) {
   return `${API_URL}/search/tables/${encodeURIComponent(databaseName)}/${encodeURIComponent(tableName)}/export`;
 }
 
+// Parâmetros repetidos e pareados: a ordem vira a ordem das abas no Excel.
+export function tablesExportUrl(tables) {
+  const params = new URLSearchParams();
+  tables.forEach(({ database, table }) => {
+    params.append("database", database);
+    params.append("table", table);
+  });
+  return `${API_URL}/search/tables/export?${params}`;
+}
+
 export function importDatabase(databaseName, file) {
   const formData = new FormData();
   formData.append("database_name", databaseName);

@@ -3,6 +3,7 @@ import { listDatabases, search, tableDetail } from "./api";
 import DatabasesPage from "./components/DatabasesPage";
 import SearchView from "./components/SearchView";
 import TableDetail from "./components/TableDetail";
+import { tableKey } from "./tableKey";
 import "./App.css";
 
 function getInitialTheme() {
@@ -10,6 +11,9 @@ function getInitialTheme() {
   if (stored === "light" || stored === "dark") return stored;
   return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
+
+const keyOf = (t) => tableKey(t.database, t.table);
+const withoutKeys = (tables, keys) => tables.filter((t) => !keys.has(keyOf(t)));
 
 function ThemeToggle({ theme, onToggle }) {
   return (
@@ -37,6 +41,7 @@ function App() {
   const [detail, setDetail] = useState(null);
   const [error, setError] = useState(null);
   const [searching, setSearching] = useState(false);
+  const [selectedTables, setSelectedTables] = useState([]);
   const [toast, setToast] = useState(null);
   const toastTimeout = useRef(null);
 
@@ -46,7 +51,17 @@ function App() {
   }, [theme]);
 
   const refreshDatabases = useCallback(() => {
-    listDatabases().then(setDatabases).catch((e) => setError(e.message));
+    listDatabases()
+      .then((list) => {
+        setDatabases(list);
+        // Bases removidas não podem continuar na seleção, senão a exportação retornaria 404.
+        const existingNames = new Set(list.map((db) => db.name));
+        setSelectedTables((current) => {
+          const kept = current.filter((t) => existingNames.has(t.database));
+          return kept.length === current.length ? current : kept;
+        });
+      })
+      .catch((e) => setError(e.message));
   }, []);
 
   useEffect(() => {
@@ -83,6 +98,29 @@ function App() {
     if (toastTimeout.current) clearTimeout(toastTimeout.current);
     toastTimeout.current = setTimeout(() => setToast(null), 1800);
   }, []);
+
+  // Seleção para exportação: a ordem de marcação vira a ordem das abas.
+  const toggleSelectedTable = useCallback((database, table) => {
+    const key = tableKey(database, table);
+    setSelectedTables((current) =>
+      current.some((t) => keyOf(t) === key) ? withoutKeys(current, new Set([key])) : [...current, { database, table }]
+    );
+  }, []);
+
+  const setTablesSelected = useCallback((tables, selected) => {
+    setSelectedTables((current) => {
+      if (!selected) return withoutKeys(current, new Set(tables.map(keyOf)));
+      const alreadySelected = new Set(current.map(keyOf));
+      const toAdd = tables.filter((t) => !alreadySelected.has(keyOf(t))).map((t) => ({ database: t.database, table: t.table }));
+      return [...current, ...toAdd];
+    });
+  }, []);
+
+  const removeSelectedTable = useCallback((database, table) => {
+    setSelectedTables((current) => withoutKeys(current, new Set([tableKey(database, table)])));
+  }, []);
+
+  const clearSelectedTables = useCallback(() => setSelectedTables([]), []);
 
   async function handleSelectTable(databaseName, tableName) {
     try {
@@ -128,6 +166,11 @@ function App() {
             results={results}
             onSelectTable={handleSelectTable}
             onCopyField={copyField}
+            selectedTables={selectedTables}
+            onToggleTable={toggleSelectedTable}
+            onSetTablesSelected={setTablesSelected}
+            onRemoveTable={removeSelectedTable}
+            onClearSelection={clearSelectedTables}
           />
         ) : (
           <DatabasesPage databases={databases} onChanged={refreshDatabases} />

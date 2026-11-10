@@ -1,13 +1,12 @@
-from io import BytesIO
-
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import Response
-from openpyxl import Workbook
-from openpyxl.styles import Font
 from sqlmodel import Session, select
 
 from app.db import get_session
+from app.excel_export import build_multi_table_workbook, build_single_table_workbook
 from app.models import Database, Table, TableField, TableIndex, IndexField
+
+XLSX_MEDIA_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
 router = APIRouter(prefix="/search", tags=["search"])
 
@@ -137,6 +136,48 @@ def _load_table_detail(database_name: str, table_name: str, session: Session):
     }
 
 
+def _xlsx_response(content: bytes, filename: str) -> Response:
+    return Response(
+        content=content,
+        media_type=XLSX_MEDIA_TYPE,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+# Declarada antes de /tables/{database_name}/{table_name} para que "export" nunca
+# seja interpretado como nome de base, mesmo que o número de segmentos mude.
+@router.get("/tables/export")
+def export_tables(
+    # default_factory evita o 422 do FastAPI: lista ausente cai na validação e vira 400.
+    database: list[str] = Query(default_factory=list),
+    table: list[str] = Query(default_factory=list),
+    session: Session = Depends(get_session),
+):
+    if not database or len(database) != len(table):
+        raise HTTPException(
+            status_code=400,
+            detail="Informe ao menos uma tabela, com o mesmo número de 'database' e 'table'.",
+        )
+
+    # dict.fromkeys remove duplicados preservando a primeira ocorrência.
+    pairs = list(dict.fromkeys(zip(database, table)))
+
+    details = []
+    for database_name, table_name in pairs:
+        detail = _load_table_detail(database_name, table_name, session)
+        if "error" in detail:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Tabela não encontrada: {database_name}.{table_name}",
+            )
+        details.append(detail)
+
+    return _xlsx_response(
+        build_multi_table_workbook(details),
+        f"df-explorer-{len(details)}-tabelas.xlsx",
+    )
+
+
 @router.get("/tables/{database_name}/{table_name}")
 def table_detail(database_name: str, table_name: str, session: Session = Depends(get_session)):
     return _load_table_detail(database_name, table_name, session)
@@ -148,54 +189,5 @@ def export_table(database_name: str, table_name: str, session: Session = Depends
     if "error" in detail:
         raise HTTPException(status_code=404, detail=detail["error"])
 
-    workbook = Workbook()
-    bold = Font(bold=True)
-
-    fields_sheet = workbook.active
-    fields_sheet.title = "Campos"
-    fields_sheet.append(["Nome", "Tipo", "Formato", "Tamanho", "Obrigatório", "Label", "Descrição"])
-    for cell in fields_sheet[1]:
-        cell.font = bold
-    for f in detail["fields"]:
-        fields_sheet.append(
-            [
-                f["name"],
-                f["data_type"],
-                f["format"],
-                f["max_width"],
-                "sim" if f["mandatory"] else "",
-                f["label"],
-                f["description"],
-            ]
-        )
-    for column_cells in fields_sheet.columns:
-        length = max(len(str(cell.value)) for cell in column_cells if cell.value is not None)
-        fields_sheet.column_dimensions[column_cells[0].column_letter].width = min(max(length + 2, 10), 60)
-
-    indexes_sheet = workbook.create_sheet("Índices")
-    indexes_sheet.append(["Nome", "Campos", "Único", "Primário"])
-    for cell in indexes_sheet[1]:
-        cell.font = bold
-    for idx in detail["indexes"]:
-        indexes_sheet.append(
-            [
-                idx["name"],
-                ", ".join(f"{f['name']}{'' if f['ascending'] else ' DESC'}" for f in idx["fields"]),
-                "sim" if idx["is_unique"] else "",
-                "sim" if idx["is_primary"] else "",
-            ]
-        )
-    for column_cells in indexes_sheet.columns:
-        length = max(len(str(cell.value)) for cell in column_cells if cell.value is not None)
-        indexes_sheet.column_dimensions[column_cells[0].column_letter].width = min(max(length + 2, 10), 60)
-
-    buffer = BytesIO()
-    workbook.save(buffer)
-    buffer.seek(0)
-
     filename = f"{detail['database']}.{detail['table']}.xlsx".replace(" ", "_")
-    return Response(
-        content=buffer.getvalue(),
-        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
-    )
+    return _xlsx_response(build_single_table_workbook(detail), filename)
